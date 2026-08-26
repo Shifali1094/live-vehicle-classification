@@ -1,0 +1,47 @@
+# Python virtual environment
+env/
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+*.csv
+*.tsv
+*.tfevents
+*.h5
+*.hdf5
+*.parquet
+
+metar_parsed.csv
+taf_parsed.csv
+taf_metar_matched.csv
+
+
+*.png
+*.jpg
+*.pdf
+*.log
+
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
+.DS_Store
+Thumbs.db
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+models/
