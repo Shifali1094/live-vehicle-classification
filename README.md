@@ -3,9 +3,9 @@
 Put the appropriate script beside the downloaded data and run it with Python in a powershell window
 
 ```powershell
-py -3.13 preprocess_mio_classification.py
-py -3.13 preprocess_mio_localization.py
-py -3.13 preprocess_ua_detrac.py
+py preprocess_mio_classification.py
+py preprocess_mio_localization.py
+py preprocess_ua_detrac.py
 ```
 
 ## Classification
