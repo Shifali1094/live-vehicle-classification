@@ -45,3 +45,4 @@ Thumbs.db
 *.ckpt
 checkpoints/
 models/
+data/
