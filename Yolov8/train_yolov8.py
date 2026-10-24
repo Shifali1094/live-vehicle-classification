@@ -7,10 +7,21 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from ultralytics import YOLO
 
+# Set the project root directory
+project_root = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
+
 # Set the path to the prepared MIO-TCD Localization dataset
 base_dir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
+    project_root,
     "processed_mio_localization"
+)
+
+# Set the output directory for YOLOv8 training results
+output_dir = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "runs"
 )
 
 # Set the dataset splits
@@ -123,5 +134,7 @@ results = model.train(
     workers=2,
     seed=42,
     device="mps",
-    name="yolov8_vehicle_detection"
+    project=output_dir,
+    name="yolov8_vehicle_detection",
+    exist_ok=True
 )
