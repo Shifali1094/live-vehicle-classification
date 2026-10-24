@@ -3,18 +3,20 @@ import os
 from ultralytics import YOLO
 
 # Get the folder containing this script
-base_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Dataset configuration file
+# Get the project root directory
+project_root = os.path.dirname(script_dir)
+
 data_path = os.path.join(
-    base_dir,
+    project_root,
     "processed_mio_localization",
     "data.yaml"
 )
 
 # Folder where all training runs are saved
 runs_dir = os.path.join(
-    base_dir,
+    script_dir,
     "runs",
     "detect"
 )
