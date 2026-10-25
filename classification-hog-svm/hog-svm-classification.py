@@ -1,4 +1,31 @@
+import json
 import random
+import sys
+import time
+from pathlib import Path
+import cv2
+import numpy as np
+from PIL import Image, ImageOps
+from skimage.feature import hog
+import joblib
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    f1_score,
+)
+
+# Visualisation and progress tracking
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+# Project configuration
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config
 
 # Reproducibility
 SEED = 42
@@ -32,11 +59,12 @@ TEST_RATIO = 0.10
 SVM_C_VALUES = [0.1, 1.0, 3.0]
 
 # Output folders
-PROCESSED_DIR = ROOT / "processed_mio_classification"
-RESULTS_DIR = ROOT / "hog_svm_results"
+RAW_TRAIN_DIR = config.CLASSIFICATION_RAW_TRAIN
+PROCESSED_DIR = config.CLASSIFICATION_PROCESSED
+RESULTS_DIR = config.HOG_RESULTS_DIR
 
 print("Target classes:", CLASSES)
-print("Raw training folder exists:", RAW_TRAIN_DIR.is_dir())
+print("Raw training folder exists:", config.CLASSIFICATION_RAW_TRAIN.is_dir())
 print("Processed data directory:", PROCESSED_DIR)
 print("Results directory:", RESULTS_DIR)
 

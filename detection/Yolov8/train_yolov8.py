@@ -2,35 +2,24 @@
 
 # Load libraries
 import os
+import config
 import yaml
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from ultralytics import YOLO
 
-# Set the project root directory
-project_root = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
-)
 
-# Set the path to the prepared MIO-TCD Localization dataset
-base_dir = os.path.join(
-    project_root,
-    "processed_mio_localization"
-)
-
-# Set the output directory for YOLOv8 training results
-output_dir = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "runs"
-)
+base_dir = config.LOCALIZATION_PROCESSED
+data_path = config.YOLO_DATA_YAML
+runs_dir = config.RUNS_DIR
 
 # Set the dataset splits
 splits = ["train", "val", "test"]
 
 # Check the number of images and label files in each dataset split
 for split in splits:
-    image_dir = os.path.join(base_dir, "images", split)
-    label_dir = os.path.join(base_dir, "labels", split)
+    image_dir = base_dir / "images" / split
+    label_dir = base_dir / "labels" / split
 
     # Get the image and label files
     image_files = [
@@ -76,11 +65,11 @@ print("Number of classes:", number_of_classes)
 class_counts = defaultdict(int)
 
 for split in splits:
-    label_dir = os.path.join(base_dir, "labels", split)
+    label_dir = base_dir / "labels" / split
 
     for filename in os.listdir(label_dir):
         if filename.endswith(".txt"):
-            label_path = os.path.join(label_dir, filename)
+            label_path = label_dir / filename
 
             # Read the annotation file
             with open(label_path, "r") as f:
@@ -134,7 +123,7 @@ results = model.train(
     workers=2,
     seed=42,
     device="mps",
-    project=output_dir,
+    project=str(runs_dir),
     name="yolov8_vehicle_detection",
     exist_ok=True
 )

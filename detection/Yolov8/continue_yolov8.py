@@ -1,25 +1,13 @@
 
 import os
+from pathlib import Path
+import sys
 from ultralytics import YOLO
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config
 
-# Get the folder containing this script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Get the project root directory
-project_root = os.path.dirname(script_dir)
-
-data_path = os.path.join(
-    project_root,
-    "processed_mio_localization",
-    "data.yaml"
-)
-
-# Folder where all training runs are saved
-runs_dir = os.path.join(
-    script_dir,
-    "runs",
-    "detect"
-)
+data_path = str(config.YOLO_DATA_YAML)
+runs_dir = str(config.RUNS_DIR)
 
 # Check that the dataset configuration exists
 if not os.path.isfile(data_path):
