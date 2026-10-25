@@ -1,7 +1,30 @@
+import json
 import random
 import sys
+import time
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+import cv2
+import numpy as np
+from PIL import Image, ImageOps
+from skimage.feature import hog
+import joblib
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    f1_score,
+)
+
+# Visualisation and progress tracking
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+# Project configuration
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
 
 # Reproducibility
