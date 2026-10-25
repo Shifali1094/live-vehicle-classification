@@ -21,11 +21,6 @@ __pycache__/
 *.hdf5
 *.parquet
 
-metar_parsed.csv
-taf_parsed.csv
-taf_metar_matched.csv
-
-
 *.png
 *.jpg
 *.pdf
