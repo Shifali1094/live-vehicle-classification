@@ -1,4 +1,8 @@
 import random
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config
 
 # Reproducibility
 SEED = 42
@@ -32,11 +36,12 @@ TEST_RATIO = 0.10
 SVM_C_VALUES = [0.1, 1.0, 3.0]
 
 # Output folders
-PROCESSED_DIR = ROOT / "processed_mio_classification"
-RESULTS_DIR = ROOT / "hog_svm_results"
+RAW_TRAIN_DIR = config.CLASSIFICATION_RAW_TRAIN
+PROCESSED_DIR = config.CLASSIFICATION_PROCESSED
+RESULTS_DIR = config.HOG_RESULTS_DIR
 
 print("Target classes:", CLASSES)
-print("Raw training folder exists:", RAW_TRAIN_DIR.is_dir())
+print("Raw training folder exists:", config.CLASSIFICATION_RAW_TRAIN.is_dir())
 print("Processed data directory:", PROCESSED_DIR)
 print("Results directory:", RESULTS_DIR)
 

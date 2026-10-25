@@ -1,6 +1,13 @@
 
 import os
+from pathlib import Path
+import sys
 from ultralytics import YOLO
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config
+
+data_path = str(config.YOLO_DATA_YAML)
+runs_dir = str(config.RUNS_DIR)
 
 # Get the folder containing this script
 script_dir = os.path.dirname(os.path.abspath(__file__))
