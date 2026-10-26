@@ -1,0 +1,28 @@
+# Evaluation add-on
+
+Copy these `.py` files into a new `evaluation/` directory in the **repository root** (beside `config.py`). No training scripts or config values need changing.
+
+Install requirements in the environment you use to run the models:
+
+```powershell
+py evaluation/evaluate_hog.py --split test
+py evaluation/evaluate_detection.py --model yolo --split test
+py evaluation/evaluate_detection.py --model frcnn --split test --weights "Faster-RCNN/frcnn_epoch2.pt"
+py evaluation/compare_models.py
+```
+
+Use `--weights` for any other saved YOLO `best.pt`/`last.pt` or Faster R-CNN `frcnn_epoch*.pt`/`frcnn_latest.pt` checkpoint. Auto-discovery searches config.RUNS_DIR for YOLO and config.FRCNN_DIR/repository root for Faster R-CNN. The Faster R-CNN script accepts both raw state dictionaries and the notebook's `{'model': ...}` resume checkpoints. The original Faster R-CNN notebook uses `frcnn_epoch2.pt`; it may have been saved to the notebook working directory rather than `Faster-RCNN/`, so pass its actual path.
+
+Outputs:
+- HOG: `hog_svm_results/evaluation/test/`
+- YOLO: `evaluation_results/yolo/test/`
+- Faster R-CNN: `evaluation_results/frcnn/test/`
+- Comparison: `evaluation_results/macro_f1_comparison.png`
+
+Detection metrics: COCO mAP@0.5 and mAP@0.5:0.95, per-class AP, precision-recall curves, and object-level confusion matrix/precision/recall/F1 at confidence 0.5 and IoU 0.5. Background accounts for false positives and misses. Object accuracy counts correct matched detections divided by all entries (not image classification accuracy). Detection inference FPS excludes image loading and model initialization; HOG FPS is SVM prediction only, excluding HOG extraction. Hardware and preprocessing must be aligned before using FPS for comparisons.
+
+Use `--max-images 100` for a quick diagnostic; it intentionally does not report COCO mAP. Full-split runs are needed for final results. COCO AP uses detections down to 0.001 confidence, while F1 uses `--conf` (default 0.5). YOLO predictions use IoU 0.7 NMS and 416px inference consistent with its training script; Faster R-CNN uses 640px images and the notebook's architecture.
+
+The processed MIO-TCD Classification test images differ from the Localization detection test images. HOG classifies individual vehicle crops; YOLO/Faster R-CNN detect and classify objects. Macro-F1 bars are descriptive, **not a fair apples-to-apples ranking**. For a fair comparison, build a shared cropped-object classification benchmark and use consistent object matching rules, or implement a HOG sliding-window detector.
+
+
