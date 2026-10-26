@@ -18,28 +18,38 @@ The expected directory structure is:
 
 ```text
 live-vehicle-classification/
-├── config.py
-├── data/
-│   ├── MIO-TCD-Classification/
-│   │   ├── train/
-│   │   └── processed_mio_classification/
-│   └── MIO-TCD-Localization/
-│       └── MIO-TCD-Localization/
-│           ├── train/
-│           ├── test/
-│           └── processed_mio_localization/
-├── Preprocessing Scripts/
-├── Faster-RCNN/
-└── hog_svm_results/
+|-- config.py
+|-- data/
+|   |-- MIO-TCD-Classification/
+|   |   |-- train/<class>/
+|   |   `-- processed_mio_classification/
+|   |-- MIO-TCD-Localization/MIO-TCD-Localization/
+|   |   |-- train/
+|   |   |-- test/
+|   |   |-- gt_train.csv
+|   |   `-- processed_mio_localization/
+|   `-- UA-DETRAC/
+|       |-- DETRAC-Images/
+|       |   |-- Insight-MVT_Annotation_Train/MVI_*/img*.jpg
+|       |   `-- Insight-MVT_Annotation_Test/MVI_*/img*.jpg
+|       |-- DETRAC-Train-Annotations-XML/MVI_*.xml
+|       |-- DETRAC-Test-Annotations-XML/MVI_*.xml
+|       `-- processed_ua_detrac/
+|-- Preprocessing Scripts/
+|-- Faster-RCNN/
+`-- hog_svm_results/
 ```
 
 The processed dataset folders are generated during preprocessing and do not need to exist beforehand.
 
 ## 2. Dataset Preprocessing
 
-Run the preprocessing scripts from the repository root. The scripts use the paths defined in `config.py`.
+Install dependencies once in your chosen Python environment, then run the scripts from the repository root. The scripts use `config.py` for paths, seed, image sizes, class names, split fractions and classification flip probability. If your extracted folders differ from the layout above, edit the corresponding paths in `config.py`.
+
+Extract dataset archives before running. The scripts do not search for datasets, extract archives, create environments or install packages. Existing nonempty output folders are protected; rename them before rerunning (classification requires its output folder not to exist).
 
 ```powershell
+py -m pip install -r requirements.txt
 py "Preprocessing Scripts/preprocess_mio_classification.py"
 py "Preprocessing Scripts/preprocess_mio_localization.py"
 py "Preprocessing Scripts/preprocess_ua_detrac.py"
@@ -75,9 +85,9 @@ The processed dataset contains:
 
 ### UA-DETRAC
 
-**Input:** The extracted `DETRAC-Images` folder and the training and testing XML annotation archives. Use the XML annotations rather than MAT files.
+**Input:** Extracted train/test image folders and extracted train/test XML annotations at the explicit `DETRAC_*` paths in `config.py`. Use XML annotations rather than MAT files.
 
-**Output:**
+**Output:** `data/UA-DETRAC/processed_ua_detrac/`, containing:
 
 - `images/`, `labels/` and `data.yaml` for YOLO training.
 - `coco_*.json` annotation files for Faster R-CNN.
@@ -150,3 +160,11 @@ Results are saved in `hog_svm_results/`, including:
 - Dataset paths should be configured through `config.py` rather than hardcoded into individual scripts.
 - Raw datasets and generated model outputs should be excluded from Git where appropriate.
 - GPU availability and training device settings may differ between operating systems.
+
+## 5. Preprocessing checks
+
+Small synthetic datasets exercise all three pipelines without needing the real datasets:
+
+```powershell
+py -m unittest discover -s tests -v
+```

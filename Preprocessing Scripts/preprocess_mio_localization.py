@@ -1,26 +1,19 @@
-"""Put beside the downloaded dataset and run with Python 3.13."""
+"""Preprocess the extracted dataset using paths and settings from config.py."""
+from collections import defaultdict
 import csv
 import json
 import math
 from pathlib import Path
 import random
-import subprocess
 import sys
-import venv
 
-try:
-    from PIL import Image
-    from defusedxml import ElementTree as ET
-except ImportError:
-    environment = Path(__file__).resolve().parent / '.vehicle-preprocess-env'
-    python = environment / ('Scripts/python.exe' if sys.platform == 'win32' else 'bin/python')
-    if not python.exists():
-        venv.EnvBuilder(with_pip=True).create(environment)
-    subprocess.run([str(python), '-m', 'pip', 'install', 'Pillow==12.1.1', 'defusedxml==0.7.1'], check=True)
-    sys.exit(subprocess.call([str(python), str(Path(__file__).resolve())]))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config
 
-SIZE, SEED = 640, 42
-CLASSES = ['car', 'bus', 'van', 'others']
+from PIL import Image
+
+SIZE, SEED = config.DETECTION_IMAGE_SIZE, config.PREPROCESS_SEED
+CLASSES = config.VEHICLE_CLASSES
 
 
 def resize(image):
@@ -79,27 +72,18 @@ def finish(output, coco, summary):
     print(f'Done: {output}', flush=True)
 
 
-import tarfile
-from collections import defaultdict
-
 MAPPING = {'car': 0, 'bus': 1, 'work_van': 2, 'articulated_truck': 3, 'art_truck': 3,
            'pickup_truck': 3, 'single_unit_truck': 3, 'motorcycle': 3, 'motorized_vehicle': 3,
            'bicycle': None, 'pedestrian': None, 'non_motorized_vehicle': None}
 
 
-def preprocess(home):
-    output = home/'processed_mio_localization'
+def preprocess():
+    source = config.LOCALIZATION_DIR
+    if not (source/'gt_train.csv').is_file() or not (source/'train').is_dir():
+        raise FileNotFoundError(f'Missing extracted localization train/ or gt_train.csv: {source}')
+    output = config.LOCALIZATION_PROCESSED
     if output.exists() and any(output.iterdir()): raise FileExistsError(f'Rename the existing output folder first: {output}')
-    output.mkdir(exist_ok=True)
-    candidates = [home/'MIO-TCD-Localization', home, home/'_mio_localization_extracted/MIO-TCD-Localization',
-                  home/'_mio_localization_extracted']
-    source = next((p for p in candidates if (p/'gt_train.csv').is_file() and (p/'train').is_dir()), None)
-    if source is None:
-        extracted = home/'_mio_localization_extracted'; extracted.mkdir(exist_ok=False)
-        print('Extracting MIO-TCD-Localization.tar...', flush=True)
-        with tarfile.open(home/'MIO-TCD-Localization.tar') as archive:
-            archive.extractall(extracted, filter='data')
-        source = extracted/'MIO-TCD-Localization' if (extracted/'MIO-TCD-Localization').is_dir() else extracted
+    output.mkdir(parents=True, exist_ok=True)
     annotations = defaultdict(list)
     with (source/'gt_train.csv').open(newline='', encoding='utf-8-sig') as file:
         for row in csv.reader(file):
@@ -115,7 +99,8 @@ def preprocess(home):
     skipped = len(set(annotations)-set(paths))
     print(f'Using {len(paths):,} images; skipped {skipped:,} missing images.', flush=True)
     items = sorted(paths); random.Random(SEED).shuffle(items)
-    end_train, end_val = max(1, int(.8*len(items))), max(1, int(.8*len(items)))+int(.1*len(items))
+    end_train = max(1, int(config.MIO_TRAIN_FRACTION*len(items)))
+    end_val = end_train + int(config.MIO_VALIDATION_FRACTION*len(items))
     assignments = [(item, 'train' if i < end_train else 'val' if i < end_val else 'test') for i, item in enumerate(items)]
     coco = {s: {'images': [], 'annotations': []} for s in ['train', 'val', 'test']}
     excluded = 0
@@ -133,8 +118,8 @@ def preprocess(home):
                 original_size=[w, h], transform=scale, objects=objects))+'\n')
             if (index+1) % 10000 == 0: print(f'{index+1:,}/{len(items):,} labeled images', flush=True)
     finish(output, coco, dict(seed=SEED, size=SIZE, excluded_objects=excluded, skipped_images=skipped,
-        split_method='80/10/10 image-level split of labeled training images; camera independence is not guaranteed.'))
+        split_method='Seeded image-level split of labeled training images; camera independence is not guaranteed.'))
 
 
 if __name__ == '__main__':
-    preprocess(Path(__file__).resolve().parent)
+    preprocess()

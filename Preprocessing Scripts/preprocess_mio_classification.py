@@ -1,27 +1,19 @@
-"""Four-class MIO preprocessing. Put beside the dataset and run with Python."""
+"""Preprocess the extracted dataset using paths and settings from config.py."""
 import json
 from pathlib import Path
 import random
-import subprocess
 import sys
-import tarfile
-import venv
 
-try:
-    from PIL import Image, ImageOps
-except ImportError:
-    environment = Path(__file__).resolve().parent / '.vehicle-preprocess-env'
-    python = environment / ('Scripts/python.exe' if sys.platform == 'win32' else 'bin/python')
-    if not python.exists():
-        venv.EnvBuilder(with_pip=True).create(environment)
-    subprocess.run([str(python), '-m', 'pip', 'install', 'Pillow==12.1.1'], check=True)
-    sys.exit(subprocess.call([str(python), str(Path(__file__).resolve())]))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config
 
-SIZE = (64, 64)
-FLIP_PROBABILITY = 0.5              # Horizontal flipping applies to training images only.
-SEED = 42
-TRAIN, VALIDATION = 0.8, 0.1         # Remaining labeled images become the internal test set.
-CLASSES = ['car', 'bus', 'van', 'others']
+from PIL import Image, ImageOps
+
+SIZE = config.CLASSIFICATION_IMAGE_SIZE
+FLIP_PROBABILITY = config.CLASSIFICATION_FLIP_PROBABILITY              # Horizontal flipping applies to training images only.
+SEED = config.PREPROCESS_SEED
+TRAIN, VALIDATION = config.MIO_TRAIN_FRACTION, config.MIO_VALIDATION_FRACTION         # Remaining labeled images become the internal test set.
+CLASSES = config.VEHICLE_CLASSES
 MAPPING = {
     'car': 'car', 'bus': 'bus', 'work_van': 'van', 'van': 'van',
     'articulated_truck': 'others', 'art_truck': 'others', 'pickup_truck': 'others',
@@ -30,25 +22,12 @@ MAPPING = {
 }
 
 
-def find_training(home):
-    candidates = [home/'MIO-TCD-Classification/train', home/'train', home,
-                  home/'_mio_extracted/train', home/'_mio_extracted/MIO-TCD-Classification/train']
-    for folder in candidates:
-        if (folder/'car').is_dir():
-            return folder
-    archive = home/'MIO-TCD-Classification.tar'
-    extracted = home/'_mio_extracted'
-    extracted.mkdir(exist_ok=False)
-    print('Extracting MIO-TCD-Classification.tar...', flush=True)
-    with tarfile.open(archive) as data:
-        data.extractall(extracted, filter='data')
-    return extracted/'train' if (extracted/'train').is_dir() else extracted/'MIO-TCD-Classification/train'
-
-
-def preprocess(home):
-    output = home/'processed_mio_classification'
-    output.mkdir(exist_ok=False)     # Never overwrite an earlier result or delete raw data.
-    training = find_training(home)
+def preprocess():
+    training = config.CLASSIFICATION_RAW_TRAIN
+    if not (training/'car').is_dir():
+        raise FileNotFoundError(f'Missing extracted classification training data: {training}')
+    output = config.CLASSIFICATION_PROCESSED
+    output.mkdir(parents=True, exist_ok=False)  # Never overwrite an earlier result or delete raw data.
     rng = random.Random(SEED)
     merged = {name: [] for name in CLASSES}
     excluded = 0
@@ -93,4 +72,4 @@ def preprocess(home):
 
 
 if __name__ == '__main__':
-    preprocess(Path(__file__).resolve().parent)
+    preprocess()

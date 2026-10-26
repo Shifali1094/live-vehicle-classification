@@ -1,26 +1,18 @@
-"""Put beside the downloaded dataset and run with Python 3.13."""
-import csv
+"""Preprocess the extracted dataset using paths and settings from config.py."""
 import json
 import math
 from pathlib import Path
 import random
-import subprocess
 import sys
-import venv
 
-try:
-    from PIL import Image
-    from defusedxml import ElementTree as ET
-except ImportError:
-    environment = Path(__file__).resolve().parent / '.vehicle-preprocess-env'
-    python = environment / ('Scripts/python.exe' if sys.platform == 'win32' else 'bin/python')
-    if not python.exists():
-        venv.EnvBuilder(with_pip=True).create(environment)
-    subprocess.run([str(python), '-m', 'pip', 'install', 'Pillow==12.1.1', 'defusedxml==0.7.1'], check=True)
-    sys.exit(subprocess.call([str(python), str(Path(__file__).resolve())]))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config
 
-SIZE, SEED = 640, 42
-CLASSES = ['car', 'bus', 'van', 'others']
+from PIL import Image
+from defusedxml import ElementTree as ET
+
+SIZE, SEED = config.DETECTION_IMAGE_SIZE, config.PREPROCESS_SEED
+CLASSES = config.VEHICLE_CLASSES
 
 
 def resize(image):
@@ -79,19 +71,6 @@ def finish(output, coco, summary):
     print(f'Done: {output}', flush=True)
 
 
-import zipfile
-
-
-def folders(home):
-    found, pending = [], [(home, 0)]
-    while pending:
-        path, depth = pending.pop(); found.append(path)
-        if depth < 4:
-            pending.extend((p, depth+1) for p in path.iterdir() if p.is_dir() and
-                not p.name.startswith(('.', 'MVI_', 'processed_')) and p.name not in ['train', 'test', 'val'])
-    return found
-
-
 def overlap(a, b):
     return min(a[2], b[2]) > max(a[0], b[0]) and min(a[3], b[3]) > max(a[1], b[1])
 
@@ -101,45 +80,33 @@ def xyxy(element):
     return [x-1, y-1, x-1+w, y-1+h]
 
 
-def preprocess(home):
-    output = home/'processed_ua_detrac'
-    if output.exists() and any(output.iterdir()): raise FileExistsError(f'Rename the existing output folder first: {output}')
-    output.mkdir(exist_ok=True)
-    for path in sorted(home.glob('*.zip')):
-        name = path.name.lower()
-        if ('detrac' not in name and 'insight-mvt' not in name) or any(t in name for t in ['-mat', 'detection', 'toolkit']):
-            continue
-        target = home/'_detrac_extracted'/path.stem
-        if (target/'EXTRACTION_COMPLETE').exists(): continue
-        target.mkdir(parents=True, exist_ok=True)
-        print(f'Extracting {path.name}...', flush=True)
-        with zipfile.ZipFile(path) as archive:
-            for member in archive.infolist():
-                name = member.filename.replace('\\', '/')
-                if ':' in name or not (target/name).resolve().is_relative_to(target.resolve()):
-                    raise ValueError('Unsafe archive path: '+name)
-            archive.extractall(target)
-        (target/'EXTRACTION_COMPLETE').touch()
-    directories = folders(home)
-    directories.sort(key=lambda p: ('_detrac_extracted' not in p.parts, str(p)))
+def preprocess():
+    output = config.DETRAC_PROCESSED
+    image_dirs = {'train': config.DETRAC_TRAIN_IMAGES, 'test': config.DETRAC_TEST_IMAGES}
+    annotation_dirs = {'train': config.DETRAC_TRAIN_XML, 'test': config.DETRAC_TEST_XML}
     partitions = {}
-    for split in ['train', 'test']:
-        matches = [p for p in directories if split in p.name.lower() and 'xml' in p.name.lower() and next(p.glob('MVI_*.xml'), None)]
-        if not matches: raise ValueError(f'Missing DETRAC {split} XML annotations.')
-        partitions[split] = sorted(matches[0].glob('MVI_*.xml'))
+    for split, folder in annotation_dirs.items():
+        if not image_dirs[split].is_dir():
+            raise FileNotFoundError(f'Missing DETRAC {split} image directory: {image_dirs[split]}')
+        partitions[split] = sorted(folder.glob('MVI_*.xml'))
+        if not partitions[split]:
+            raise FileNotFoundError(f'Missing DETRAC {split} XML annotations: {folder}')
+    if output.exists() and any(output.iterdir()): raise FileExistsError(f'Rename the existing output folder first: {output}')
+    output.mkdir(parents=True, exist_ok=True)
     if {p.stem for p in partitions['train']} & {p.stem for p in partitions['test']}:
         raise ValueError('A sequence appears in both official train and test annotations.')
     sequence_paths, skipped = {}, []
-    for xml in partitions['train']+partitions['test']:
-        matches = [p/xml.stem for p in directories if (p/xml.stem).is_dir()]
-        if not matches:
-            skipped.append(xml.stem); continue
-        sequence_paths[xml.stem] = matches[0]
+    for split, files in partitions.items():
+        for xml in files:
+            sequence = image_dirs[split]/xml.stem
+            if not sequence.is_dir():
+                skipped.append(xml.stem); continue
+            sequence_paths[xml.stem] = sequence
     if not sequence_paths: raise ValueError('No image sequences found for the supplied annotations.')
     partitions = {split: [p for p in files if p.stem in sequence_paths] for split, files in partitions.items()}
     print(f'Using {len(sequence_paths)} sequences; skipped {len(skipped)} missing folders.', flush=True)
     training = partitions['train'][:]; random.Random(SEED).shuffle(training)
-    validation = {p.stem for p in training[:max(1, round(len(training)*.2))]} if len(training)>1 else set()
+    validation = {p.stem for p in training[:max(1, round(len(training)*config.DETRAC_VALIDATION_FRACTION))]} if len(training)>1 else set()
     jobs = [(p, 'val' if p.stem in validation else 'train') for p in partitions['train']]+[(p, 'test') for p in partitions['test']]
     coco = {s: {'images': [], 'annotations': []} for s in ['train', 'val', 'test']}
     summary = dict(seed=SEED, size=SIZE, split_method='Whole sequences; official test kept separate.',
@@ -188,4 +155,4 @@ def preprocess(home):
 
 
 if __name__ == '__main__':
-    preprocess(Path(__file__).resolve().parent)
+    preprocess()
